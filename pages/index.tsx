@@ -1,9 +1,46 @@
-import type { NextPage } from 'next'
-import Head from 'next/head'
-import Image from 'next/image'
-import styles from '../styles/Home.module.css'
+import type { NextPage } from 'next';
+import Head from 'next/head';
+import Image from 'next/image';
+import dynamic from 'next/dynamic';
+import { useMount } from 'ahooks';
+import { DocumentData } from 'firebase/firestore';
+import { ComponentType, useState } from 'react';
+import ReactModal from 'react-modal';
+// import { TSStage } from 'tart-scratch/webpacked/bundle';
+
+import { fbApp } from '../libs/firebase';
+import styles from '../styles/Home.module.css';
+
+enum EModal {
+  None,
+  Preview,
+}
+
+interface ICommentData {
+  id: string;
+  data: DocumentData;
+}
+
+const DynamicComponentWithNoSSR = dynamic(
+  () => import('tart-scratch/webpacked/bundle').then((mod) => mod.TSStage),
+  { ssr: false }
+);
 
 const Home: NextPage = () => {
+  const [comments, setComments] = useState<ICommentData[]>([]);
+  const [modal, setModal] = useState(EModal.None);
+  const [selectedProject, setSelectedProject] = useState<ICommentData>();
+
+  const handleOpenPreviewModal = (project: ICommentData) => {
+    setSelectedProject(project);
+    setModal(EModal.Preview);
+  };
+
+  useMount(async () => {
+    const data = await fbApp.getProjects();
+    setComments(data);
+  });
+
   return (
     <div className={styles.container}>
       <Head>
@@ -17,40 +54,43 @@ const Home: NextPage = () => {
           Welcome to <a href="https://nextjs.org">Next.js!</a>
         </h1>
 
-        <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.tsx</code>
-        </p>
-
         <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h2>Documentation &rarr;</h2>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h2>Learn &rarr;</h2>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/canary/examples"
-            className={styles.card}
-          >
-            <h2>Examples &rarr;</h2>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h2>Deploy &rarr;</h2>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+          {comments.map((c) => (
+            <div className={styles.card} key={c.id}>
+              <figure>
+                <div className={styles.thumbnail}>
+                  <Image
+                    src={c.data.thumbnail}
+                    layout="fill"
+                    alt="scratch project thumb"
+                  />
+                </div>
+                <figcaption>
+                  <p>{c.id}</p>
+                </figcaption>
+              </figure>
+              <button onClick={() => handleOpenPreviewModal(c)}>Preview</button>
+            </div>
+          ))}
         </div>
+
+        <ReactModal
+          isOpen={modal === EModal.Preview}
+          onRequestClose={() => setModal(EModal.None)}
+          ariaHideApp={false}
+          style={{
+            content: {
+              top: '50%',
+              left: '50%',
+              right: 'unset',
+              bottom: 'unset',
+              transform: 'translate(-50%, -50%)',
+            },
+          }}
+        >
+          <DynamicComponentWithNoSSR project={selectedProject} />
+          {/* <TSStage project={selectedProject} /> */}
+        </ReactModal>
       </main>
 
       <footer className={styles.footer}>
@@ -66,7 +106,7 @@ const Home: NextPage = () => {
         </a>
       </footer>
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;

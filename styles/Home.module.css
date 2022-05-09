@@ -103,6 +103,16 @@
   line-height: 1.5;
 }
 
+.card figure {
+  margin: 0;
+}
+
+.thumbnail {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+
 .logo {
   height: 1em;
   margin-left: 0.5rem;
